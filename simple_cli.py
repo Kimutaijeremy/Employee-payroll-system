@@ -4,47 +4,101 @@ Simple CLI wrapper for the payroll system
 Usage: python simple_cli.py [command] [args]
 """
 import sys
-from app import *
+import sqlite3
+from datetime import datetime
+
+DB_FILE = "payroll.db"
+
+def init_db():
+    """Initialize database"""
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS departments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            code TEXT UNIQUE,
+            budget REAL DEFAULT 0
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS roles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT UNIQUE NOT NULL,
+            base_salary REAL NOT NULL,
+            housing_allowance REAL DEFAULT 0,
+            transport_allowance REAL DEFAULT 0,
+            medical_allowance REAL DEFAULT 0
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS employees (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            employee_id TEXT UNIQUE NOT NULL,
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            phone TEXT,
+            date_joined DATE NOT NULL,
+            is_active BOOLEAN DEFAULT 1,
+            role_id INTEGER,
+            department_id INTEGER,
+            FOREIGN KEY (role_id) REFERENCES roles(id),
+            FOREIGN KEY (department_id) REFERENCES departments(id)
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS payrolls (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            payroll_id TEXT UNIQUE NOT NULL,
+            employee_id INTEGER NOT NULL,
+            month INTEGER NOT NULL,
+            year INTEGER NOT NULL,
+            gross_salary REAL NOT NULL,
+            tax REAL NOT NULL,
+            nhif REAL NOT NULL,
+            nssf REAL NOT NULL,
+            net_salary REAL NOT NULL,
+            FOREIGN KEY (employee_id) REFERENCES employees(id)
+        )
+    ''')
+    
+    conn.commit()
+    conn.close()
+    print("Database initialized")
 
 def show_usage():
-    """Show usage instructions"""
     print("""
-Employee Payroll System - Simple CLI
-====================================
-
-Usage:
-  python simple_cli.py [command] [arguments]
+Simple Payroll CLI
+==================
 
 Commands:
   init                    Initialize database
-  dashboard               Show system dashboard
   
-  dept list              List all departments
-  dept add [name] [code] Add department
-  dept show [id]         Show department details
+  dept list              List departments
+  dept add <name> <code> Add department
   
-  role list              List all roles
-  role add [title] [salary] Add role
+  role list              List roles
+  role add <title> <salary> Add role
   
-  emp list               List all employees
-  emp add [first] [last] [email] [role_id] [dept_id] Add employee
-  emp show [id]          Show employee details
+  emp list               List employees
+  emp show <id>          Show employee
   
-  payroll gen [emp_id] [month] [year]  Generate payroll
-  payroll bulk [month] [year]          Generate payroll for all
-  payroll history [emp_id]             Show payroll history
-  payroll report [month] [year]        Show monthly report
-  payroll export [month] [year]        Export to CSV
-
-Examples:
+  payroll gen <emp_id> <month> <year>  Generate payroll
+  payroll history <emp_id>             Show payroll history
+  
+Example:
   python simple_cli.py init
-  python simple_cli.py dept add "Engineering" "ENG"
+  python simple_cli.py dept add "Engineering" ENG
+  python simple_cli.py role add "Engineer" 100000
   python simple_cli.py emp list
-  python simple_cli.py payroll gen EMP001 12 2024
 """)
 
 def main():
-    """Main CLI entry point"""
     if len(sys.argv) < 2:
         show_usage()
         return
@@ -53,94 +107,13 @@ def main():
     
     if command == "init":
         init_db()
-    
-    elif command == "dashboard":
-        PayrollCLI().show_dashboard()
-    
-    elif command == "dept":
-        if len(sys.argv) < 3:
-            print("Usage: python simple_cli.py dept [list|add|show]")
-            return
-        
-        subcommand = sys.argv[2]
-        
-        if subcommand == "list":
-            DepartmentService.list_all()
-        elif subcommand == "add":
-            if len(sys.argv) < 5:
-                print("Usage: python simple_cli.py dept add [name] [code]")
-                return
-            DepartmentService.create(sys.argv[3], sys.argv[4])
-        elif subcommand == "show":
-            if len(sys.argv) < 4:
-                print("Usage: python simple_cli.py dept show [id]")
-                return
-            # Implement department show
-            pass
-    
-    elif command == "role":
-        if len(sys.argv) < 3:
-            print("Usage: python simple_cli.py role [list|add]")
-            return
-        
-        subcommand = sys.argv[2]
-        
-        if subcommand == "list":
-            RoleService.list_all()
-        elif subcommand == "add":
-            if len(sys.argv) < 5:
-                print("Usage: python simple_cli.py role add [title] [salary]")
-                return
-            RoleService.create(sys.argv[3], float(sys.argv[4]))
-    
-    elif command == "emp":
-        if len(sys.argv) < 3:
-            print("Usage: python simple_cli.py emp [list|show]")
-            return
-        
-        subcommand = sys.argv[2]
-        
-        if subcommand == "list":
-            EmployeeService.list_all()
-        elif subcommand == "show":
-            if len(sys.argv) < 4:
-                print("Usage: python simple_cli.py emp show [id]")
-                return
-            EmployeeService.get_details(sys.argv[3])
-    
-    elif command == "payroll":
-        if len(sys.argv) < 3:
-            print("Usage: python simple_cli.py payroll [gen|bulk|history|report|export]")
-            return
-        
-        subcommand = sys.argv[2]
-        
-        if subcommand == "gen":
-            if len(sys.argv) < 6:
-                print("Usage: python simple_cli.py payroll gen [emp_id] [month] [year]")
-                return
-            PayrollService.generate(sys.argv[3], int(sys.argv[4]), int(sys.argv[5]))
-        elif subcommand == "bulk":
-            if len(sys.argv) < 5:
-                print("Usage: python simple_cli.py payroll bulk [month] [year]")
-                return
-            PayrollService.generate_all(int(sys.argv[3]), int(sys.argv[4]))
-        elif subcommand == "history":
-            if len(sys.argv) < 4:
-                print("Usage: python simple_cli.py payroll history [emp_id]")
-                return
-            PayrollService.employee_history(sys.argv[3])
-        elif subcommand == "report":
-            if len(sys.argv) < 5:
-                print("Usage: python simple_cli.py payroll report [month] [year]")
-                return
-            PayrollService.monthly_summary(int(sys.argv[3]), int(sys.argv[4]))
-        elif subcommand == "export":
-            if len(sys.argv) < 5:
-                print("Usage: python simple_cli.py payroll export [month] [year]")
-                return
-            PayrollService.export_csv(int(sys.argv[3]), int(sys.argv[4]))
-    
+    elif command == "dept" and sys.argv[2] == "list":
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name, code FROM departments")
+        for row in cursor.fetchall():
+            print(f"{row[0]}: {row[1]} ({row[2]})")
+        conn.close()
     else:
         print(f"Unknown command: {command}")
         show_usage()

@@ -5,10 +5,9 @@ load_dotenv()
 
 class Config:
     DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///payroll.db")
-    DEFAULT_COUNTRY = os.getenv("DEFAULT_COUNTRY", "Kenya")
-    CURRENCY = os.getenv("CURRENCY", "KES")
+    CURRENCY = "KES"
     
-    # Tax configuration for Kenya (can be extended for other countries)
+    # Tax brackets for Kenya
     TAX_BRACKETS = [
         (0, 24000, 0.10),
         (24001, 32333, 0.25),
@@ -17,8 +16,7 @@ class Config:
         (800001, float('inf'), 0.35)
     ]
     
-    # Statutory deductions (Kenya)
-    NSSF_RATE = 0.06  # 6% of pensionable earnings
+    # NHIF rates
     NHIF_RATES = [
         (0, 5999, 150),
         (6000, 7999, 300),
@@ -38,3 +36,6 @@ class Config:
         (90000, 99999, 1600),
         (100000, float('inf'), 1700)
     ]
+    
+    NSSF_RATE = 0.06
+    NSSF_LIMIT = 18000
