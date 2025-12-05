@@ -24,6 +24,7 @@ def init_db():
             name TEXT UNIQUE NOT NULL,
             code TEXT UNIQUE,
             budget REAL DEFAULT 0,
+            description TEXT DEFAULT '',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -38,6 +39,7 @@ def init_db():
             transport_allowance REAL DEFAULT 0,
             medical_allowance REAL DEFAULT 0,
             other_allowance REAL DEFAULT 0,
+            description TEXT DEFAULT '',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
